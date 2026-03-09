@@ -21,9 +21,256 @@ body{
 
 <div id="chat-widget-container"></div>
 
-<script src="https://widgets.leadconnectorhq.com/loader.js"
-data-resources-url="https://widgets.leadconnectorhq.com/chat-widget/loader.js"
-data-widget-id="697a76990a40eabf60f4d777">
+<!--
+Name: Better Biz Marketing
+Version: BBM Chat Embed v1.7 (mobile float + desktop embed)
+-->
+
+<div id="chat-widget-container"></div>
+
+<script>
+(function () {
+
+  /* =========================================================
+     GLOBAL CONFIG (EDIT THESE)
+     ========================================================= */
+  var BBM_WIDGET_ID          = "697a76990a40eabf60f4d777";
+
+  // Desktop embedded panel sizing
+  var DESKTOP_MAX_WIDTH_PX   = 1400;
+  var DESKTOP_HEIGHT_PX      = 860;
+
+  // Mobile floating sizing (matches original behavior)
+  var MOBILE_BREAKPOINT_PX   = 768;
+  var MOBILE_SIDE_MARGIN_PX  = 12;   // space from screen edges
+  var MOBILE_TOP_MARGIN_PX   = 12;
+  var MOBILE_BOTTOM_MARGIN_PX= 12;
+
+  var LOADER_SRC             = "https://widgets.leadconnectorhq.com/loader.js";
+  var RESOURCES_URL          = "https://widgets.leadconnectorhq.com/chat-widget/loader.js";
+  /* ========================================================= */
+
+  function injectLoader(){
+    if (document.querySelector('script[data-bbm-lc-loader="true"]')) return;
+    var s = document.createElement("script");
+    s.src = LOADER_SRC;
+    s.setAttribute("data-resources-url", RESOURCES_URL);
+    s.setAttribute("data-widget-id", BBM_WIDGET_ID);
+    s.setAttribute("data-bbm-lc-loader", "true");
+    document.head.appendChild(s);
+  }
+
+  function findChatWidget(){ return document.querySelector("chat-widget"); }
+  function getShadow(chatEl){ return (chatEl && chatEl.shadowRoot) ? chatEl.shadowRoot : null; }
+
+  function moveWidgetIntoContainer(chatEl){
+    // Only embed into container on desktop. On mobile we keep it floating.
+    var container = document.getElementById("chat-widget-container");
+    if (!container) return;
+    if (chatEl && chatEl.parentNode !== container){
+      container.appendChild(chatEl);
+    }
+  }
+
+  function hideLauncherButton(shadowRoot){
+    var btn = shadowRoot.querySelector("#lc_text-widget--btn");
+    if (btn) btn.style.display = "none";
+  }
+
+  function clickLauncherIfNeeded(shadowRoot){
+    var box = shadowRoot.querySelector("#lc_text-widget--box");
+    if (box) return;
+    var btn = shadowRoot.querySelector("#lc_text-widget--btn");
+    if (btn) { try { btn.click(); } catch (e) {} }
+  }
+
+  function forceOpenAPI(){
+    try {
+      if (typeof leadConnector !== "undefined" &&
+          leadConnector.chatWidget &&
+          leadConnector.chatWidget.isLoaded) {
+        leadConnector.chatWidget.openWidget();
+      }
+    } catch (e) {}
+  }
+
+  function applyDesktopEmbedded(shadowRoot){
+    var widgetRoot = shadowRoot.querySelector("#lc_text-widget");
+    var box = shadowRoot.querySelector("#lc_text-widget--box");
+    if (!widgetRoot || !box) return;
+
+    // Embed behavior
+    widgetRoot.style.setProperty("position", "static", "important");
+    widgetRoot.style.setProperty("transform", "none", "important");
+    widgetRoot.style.setProperty("bottom", "auto", "important");
+    widgetRoot.style.setProperty("right", "auto", "important");
+    widgetRoot.style.setProperty("width", "100%", "important");
+
+    // Container sizing
+    var pageContainer = document.getElementById("chat-widget-container");
+    if (pageContainer){
+      pageContainer.style.maxWidth = (DESKTOP_MAX_WIDTH_PX + "px");
+      pageContainer.style.margin = "0 auto";
+      pageContainer.style.padding = "12px";
+    }
+
+    // Panel sizing
+    box.style.setProperty("position", "static", "important");
+    box.style.setProperty("width", "100%", "important");
+    box.style.setProperty("maxWidth", (DESKTOP_MAX_WIDTH_PX + "px"), "important");
+    box.style.setProperty("height", (DESKTOP_HEIGHT_PX + "px"), "important");
+    box.style.setProperty("maxHeight", (DESKTOP_HEIGHT_PX + "px"), "important");
+    box.style.setProperty("overflow", "auto", "important");
+    box.style.setProperty("zIndex", "9999", "important");
+
+    // Header/footer visible
+    var heading = box.querySelector(".lc_text-widget_heading--root");
+    if (heading) heading.style.display = "";
+    var branding = box.querySelector(".lc_text-widget--agency-branding");
+    if (branding) branding.style.display = "";
+  }
+
+  function applyMobileFloating(shadowRoot){
+    var widgetRoot = shadowRoot.querySelector("#lc_text-widget");
+    var box = shadowRoot.querySelector("#lc_text-widget--box");
+    if (!widgetRoot || !box) return;
+
+    // Keep it floating like original (fixed)
+    widgetRoot.style.setProperty("position", "fixed", "important");
+    widgetRoot.style.setProperty("left", (MOBILE_SIDE_MARGIN_PX + "px"), "important");
+    widgetRoot.style.setProperty("right", (MOBILE_SIDE_MARGIN_PX + "px"), "important");
+    widgetRoot.style.setProperty("bottom", (MOBILE_BOTTOM_MARGIN_PX + "px"), "important");
+    widgetRoot.style.setProperty("top", "auto", "important");
+    widgetRoot.style.setProperty("transform", "none", "important");
+    widgetRoot.style.setProperty("width", "auto", "important");
+    widgetRoot.style.setProperty("zIndex", "999999", "important");
+
+    // Use dynamic viewport height on Safari (best), with fallbacks
+    // Height = visible viewport - top/bottom margins
+    var mobileHeight = "calc(100dvh - " + (MOBILE_TOP_MARGIN_PX + MOBILE_BOTTOM_MARGIN_PX) + "px)";
+    box.style.setProperty("height", mobileHeight, "important");
+    box.style.setProperty("maxHeight", mobileHeight, "important");
+    box.style.setProperty("width", "100%", "important");
+    box.style.setProperty("maxWidth", "100%", "important");
+    box.style.setProperty("position", "static", "important");
+    box.style.setProperty("overflow", "auto", "important");
+    box.style.setProperty("zIndex", "999999", "important");
+
+    // If a browser does not support dvh, this still works decently
+    // because the widget remains fixed and scrolls internally.
+
+    // Header/footer visible
+    var heading = box.querySelector(".lc_text-widget_heading--root");
+    if (heading) heading.style.display = "";
+    var branding = box.querySelector(".lc_text-widget--agency-branding");
+    if (branding) branding.style.display = "";
+  }
+
+  function applyResponsiveLayout(shadowRoot){
+    var isMobile = window.innerWidth <= MOBILE_BREAKPOINT_PX;
+
+    if (isMobile) {
+      // On mobile, do NOT move it into the container, keep original floating behavior
+      applyMobileFloating(shadowRoot);
+    } else {
+      // On desktop, embed into container and size wide
+      var chatEl = findChatWidget();
+      if (chatEl) moveWidgetIntoContainer(chatEl);
+      applyDesktopEmbedded(shadowRoot);
+    }
+  }
+
+  function bumpFontSize(shadowRoot){
+    if (shadowRoot.__bbmFontObserverAttached) return;
+    shadowRoot.__bbmFontObserverAttached = true;
+
+    var tries = 0;
+    var t = setInterval(function(){
+      tries++;
+      var chatPane = shadowRoot.querySelector("chat-pane");
+      if (!chatPane) {
+        if (tries > 200) clearInterval(t);
+        return;
+      }
+
+      var apply = function(){
+        chatPane.querySelectorAll("p").forEach(function(p){
+          p.style.fontSize = "16px";
+        });
+      };
+
+      apply();
+      var obs = new MutationObserver(apply);
+      obs.observe(chatPane, { childList: true, subtree: true });
+
+      clearInterval(t);
+    }, 150);
+  }
+
+  function applyAll(){
+    var chatEl = findChatWidget();
+    if (!chatEl) return;
+
+    var shadowRoot = getShadow(chatEl);
+    if (!shadowRoot) return;
+
+    // Open reliably
+    forceOpenAPI();
+    clickLauncherIfNeeded(shadowRoot);
+
+    // Hide icon
+    hideLauncherButton(shadowRoot);
+
+    // Apply correct layout for screen size
+    applyResponsiveLayout(shadowRoot);
+
+    // Font
+    bumpFontSize(shadowRoot);
+  }
+
+  function observeShadowRoot(chatEl){
+    var shadowRoot = getShadow(chatEl);
+    if (!shadowRoot) return;
+
+    if (shadowRoot.__bbmShadowObserved) return;
+    shadowRoot.__bbmShadowObserved = true;
+
+    var shadowObs = new MutationObserver(function(){
+      applyAll();
+    });
+    shadowObs.observe(shadowRoot, { childList: true, subtree: true });
+  }
+
+  function start(){
+    injectLoader();
+
+    // Watch for widget appearing
+    var pageObs = new MutationObserver(function(){
+      var chatEl = findChatWidget();
+      if (chatEl) observeShadowRoot(chatEl);
+      applyAll();
+    });
+    pageObs.observe(document.documentElement, { childList: true, subtree: true });
+
+    // Retry loop for delayed hydration
+    var tries = 0;
+    var t = setInterval(function(){
+      tries++;
+      var chatEl = findChatWidget();
+      if (chatEl) observeShadowRoot(chatEl);
+      applyAll();
+      if (tries > 300) clearInterval(t);
+    }, 100);
+
+    window.addEventListener("resize", applyAll);
+    document.addEventListener("visibilitychange", function(){
+      if (!document.hidden) applyAll();
+    });
+  }
+
+  start();
+
+})();
 </script>
 
 </body>
